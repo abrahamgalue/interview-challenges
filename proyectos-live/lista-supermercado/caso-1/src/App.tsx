@@ -11,6 +11,7 @@ interface Form extends HTMLFormElement {
 
 function App() {
   const [items, setItems] = useState<Item[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
   function handleToggle(id: Item["id"]) {
     setItems((items) =>
@@ -19,7 +20,24 @@ function App() {
   }
 
   function handleAdd(event: React.ChangeEvent<Form>) {
-    // Should implement
+    event.preventDefault();
+    const formData = new FormData(event.target);
+    const userValue = (formData.get("text") as string).trim();
+
+    if (!userValue) return;
+
+    const newItems = [
+      ...items,
+      {
+        id: Date.now(),
+        text: userValue,
+        completed: false,
+      },
+    ];
+
+    setItems(newItems);
+
+    event.currentTarget.reset();
   }
 
   function handleRemove(id: Item["id"]) {
@@ -27,8 +45,19 @@ function App() {
   }
 
   useEffect(() => {
-    api.list().then(setItems);
+    api
+      .list()
+      .then(setItems)
+      .finally(() => setIsLoading(false));
   }, []);
+
+  if (isLoading) {
+    return <p>Cargando...</p>;
+  }
+
+  if (items.length === 0) {
+    return <p>No hay elementos</p>;
+  }
 
   return (
     <main className={styles.main}>
