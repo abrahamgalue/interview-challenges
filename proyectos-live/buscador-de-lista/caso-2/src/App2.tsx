@@ -46,44 +46,49 @@ const useDebounce = (value: string, delay: number) => {
   return debounceValue;
 };
 
-const initialFavoritesValue = () => {
-  const isFavoriteInLocal = localStorage.getItem("favorites");
+const initialProductsValue = () => {
+  const isProductsInLocal = localStorage.getItem("products");
 
-  if (isFavoriteInLocal) {
-    return JSON.parse(isFavoriteInLocal);
+  if (isProductsInLocal) {
+    return JSON.parse(isProductsInLocal);
   }
 
   return [];
 };
 
 function App() {
-  const [products, setProducts] = useState<Product[]>([]);
+  const [products, setProducts] = useState<Product[]>(initialProductsValue);
   const [query, setQuery] = useState<string>("");
-  const [favorites, setFavorites] = useState<Product["id"][] | []>(initialFavoritesValue);
   const debouncedQuery = useDebounce(query, 300);
 
   useEffect(() => {
-    api.search(debouncedQuery).then(setProducts);
+    api.search(debouncedQuery).then((products) => {
+      const newProducts = products.map((product) => ({
+        ...product,
+        favorite: product?.favorite ?? false,
+      }));
+
+      setProducts(newProducts);
+    });
   }, [debouncedQuery]);
 
   useEffect(() => {
-    localStorage.setItem("favorites", JSON.stringify(favorites));
-  }, [favorites]);
+    localStorage.setItem("products", JSON.stringify(products));
+  }, [products]);
 
   function handleFavorites(id: Product["id"]) {
-    const isFavorite = favorites.some((favId) => favId === id);
+    const newProducts = products.map((product) => {
+      if (product.id === id) {
+        return {
+          ...product,
+          favorite: !product.favorite,
+        };
+      }
 
-    if (isFavorite) {
-      const newFavorites = favorites.filter((favId) => favId !== id);
+      return product;
+    });
 
-      setFavorites(newFavorites);
-    }
-
-    if (!isFavorite) {
-      const newFavorites = [...favorites, id];
-
-      setFavorites(newFavorites);
-    }
+    setProducts(newProducts);
   }
 
   return (
@@ -94,7 +99,7 @@ function App() {
         {products.map((product) => (
           <li
             key={product.id}
-            className={favorites.some((favId) => favId === product.id) ? "fav" : ""}
+            className={product?.favorite ? "fav" : ""}
             onClick={() => handleFavorites(product.id)}
           >
             <h4>{product.title}</h4>
